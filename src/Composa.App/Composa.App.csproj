@@ -49,6 +49,7 @@
     -->
     <PackageReference Include="Tmds.DBus.Protocol" Version="0.94.1" />
     <AvaloniaResource Include="Assets/**" />
+    <EmbeddedResource Include="Localization/*.zh-CN.json" LogicalName="Localization/%(Filename)%(Extension)" WithCulture="false" />
     <!--
       How this build was distributed, read back at runtime by UpdateCheck. The packaging scripts
       pass "managed" for the .deb and .rpm, where apt or dnf owns updates and the application must

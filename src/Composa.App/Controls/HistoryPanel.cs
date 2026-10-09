@@ -24,7 +24,7 @@ public sealed class HistoryPanel : UserControl
     private EditorSession? session;
     private readonly StackPanel rows = new() { Background = Brushes.Transparent };
     private readonly ScrollViewer scroll;
-    private readonly TextBlock dropped = new() { Text = "Older steps are no longer kept", Foreground = Palette.Secondary, FontSize = 11, Margin = new Thickness(10, 0, 10, 4), IsVisible = false };
+    private readonly TextBlock dropped = new() { Text = L10n.T("Older steps are no longer kept"), Foreground = Palette.Secondary, FontSize = 11, Margin = new Thickness(10, 0, 10, 4), IsVisible = false };
     private bool scrubbing;
     private int? pendingIndex;
     private bool pendingPosted;
@@ -124,7 +124,7 @@ public sealed class HistoryPanel : UserControl
         var brush = ahead ? Palette.Secondary : Palette.Foreground;
         var name = new TextBlock
         {
-            Text = step.Name, Foreground = brush, FontStyle = ahead ? FontStyle.Italic : FontStyle.Normal,
+            Text = DisplayName(step.Name), Foreground = brush, FontStyle = ahead ? FontStyle.Italic : FontStyle.Normal,
             TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(8, 0, 0, 0)
         };
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto") };
@@ -136,7 +136,7 @@ public sealed class HistoryPanel : UserControl
             var disk = Icons.Create(Icons.Disk, 12, Palette.Secondary);
             // The icon itself ignores the pointer, so the tip sits on a box around it.
             var mark = new Border { Background = Brushes.Transparent, Child = disk, Margin = new Thickness(6, 0, 0, 0) };
-            ToolTip.SetTip(mark, "This is the state in the file");
+            ToolTip.SetTip(mark, L10n.T("This is the state in the file"));
             Grid.SetColumn(mark, 2);
             grid.Children.Add(mark);
         }
@@ -156,6 +156,21 @@ public sealed class HistoryPanel : UserControl
     private static readonly HashSet<string> AdjustmentNames = Enum.GetValues<AdjustmentKind>().Select(k => Adjustment.Create(k).DisplayName).Append("Auto Levels").ToHashSet();
     private static readonly HashSet<string> FilterNames = Enum.GetValues<FilterKind>().Select(FilterSettings.DisplayName).ToHashSet();
     private static readonly string[] EffectNames = Enum.GetValues<LayerEffectKind>().Select(LayerEffects.DisplayName).ToArray();
+
+    /// <summary>Localizes a machine-generated history caption without changing the stored name or user-supplied suffix.</summary>
+    public static string DisplayName(string name)
+    {
+        var translated = L10n.T(name);
+        if (translated != name) return translated;
+        foreach (var action in new[] { "Add", "Edit", "Copy", "Remove", "Hide", "Show" })
+        {
+            var prefix = action + " ";
+            if (!name.StartsWith(prefix, StringComparison.Ordinal)) continue;
+            var suffix = name[prefix.Length..];
+            return L10n.F(action + " {0}", EffectNames.Contains(suffix) ? L10n.T(suffix) : suffix);
+        }
+        return name;
+    }
 
     /// <summary>
     /// The icon for a step, from its name. The names are the ones the Edit menu shows after Undo, so they already say

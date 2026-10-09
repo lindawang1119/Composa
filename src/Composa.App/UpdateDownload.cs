@@ -37,9 +37,9 @@ public sealed class UpdateDownload(HttpMessageHandler? handler = null, TimeSpan?
     public async Task<DownloadResult> Run(ReleaseInfo release, ReleaseAsset asset, string folder, IProgress<DownloadProgress>? progress, CancellationToken cancel)
     {
         if (!ReleaseAsset.IsOwnAsset(asset.Url))
-            return Failed($"{asset.Name} does not come from Composa's own release page, so it was not downloaded.");
+            return Failed(L10n.F("{0} does not come from Composa's own release page, so it was not downloaded.", asset.Name));
         if (release.Checksums is not { } sums || !ReleaseAsset.IsOwnAsset(sums.Url))
-            return Failed("This release has no list of checksums, so a download could not be checked. Download it from the release page instead.");
+            return Failed(L10n.T("This release has no list of checksums, so a download could not be checked. Download it from the release page instead."));
 
         using var client = handler == null ? new HttpClient() : new HttpClient(handler, disposeHandler: false);
         client.Timeout = Timeout.InfiniteTimeSpan; // Stalls are caught instead; see StallTimeout.
@@ -53,7 +53,7 @@ public sealed class UpdateDownload(HttpMessageHandler? handler = null, TimeSpan?
             stall.CancelAfter(stallAfter);
             var listed = Checksums.Parse(await client.GetStringAsync(sums.Url, either.Token));
             if (!listed.TryGetValue(asset.Name, out var expected))
-                return Failed($"The release's list of checksums does not mention {asset.Name}, so it could not be checked. Download it from the release page instead.");
+                return Failed(L10n.F("The release's list of checksums does not mention {0}, so it could not be checked. Download it from the release page instead.", asset.Name));
 
             // Nothing is asked of the network while files already there are hashed, which on a slow or
             // cloud-backed folder may take a while and is no stall.
@@ -72,7 +72,7 @@ public sealed class UpdateDownload(HttpMessageHandler? handler = null, TimeSpan?
                 actual = await Fetch(client, asset, file, progress, stall, either.Token, cancel);
             }
             if (actual != expected)
-                return Failed("The downloaded file did not match the release's checksum, so it was deleted. Try again, or download it from the release page.");
+                return Failed(L10n.T("The downloaded file did not match the release's checksum, so it was deleted. Try again, or download it from the release page."));
             await MoveIntoPlace(part, target);
             part = null;
             return new DownloadResult(DownloadOutcome.Downloaded, target);
@@ -83,7 +83,7 @@ public sealed class UpdateDownload(HttpMessageHandler? handler = null, TimeSpan?
         }
         catch (OperationCanceledException) when (stall.IsCancellationRequested)
         {
-            return Failed($"The download stalled: nothing arrived for {stallAfter.TotalSeconds:0} seconds. Try again later.");
+            return Failed(L10n.F("The download stalled: nothing arrived for {0:0} seconds. Try again later.", stallAfter.TotalSeconds));
         }
         catch (Exception error) when (Describe(error, folder) is { } problem)
         {
@@ -205,14 +205,14 @@ public sealed class UpdateDownload(HttpMessageHandler? handler = null, TimeSpan?
     public static string? Describe(Exception error, string folder) => error switch
     {
         HttpRequestException { StatusCode: HttpStatusCode.NotFound } =>
-            "GitHub no longer has this file. The release page may have a newer one.",
+            L10n.T("GitHub no longer has this file. The release page may have a newer one."),
         HttpRequestException { StatusCode: { } status } =>
-            $"GitHub refused the download ({(int)status} {status}). Try again later.",
-        HttpRequestException => "Could not reach GitHub. Check the connection and try again.",
-        HttpIOException => "The connection broke off before the download finished. Try again.",
-        IOException io when IsDiskFull(io) => $"There is not enough space in {folder} for the download.",
-        UnauthorizedAccessException or DirectoryNotFoundException => $"Composa cannot write to {folder}.",
-        IOException io => $"Composa could not write the download to {folder}: {io.Message}",
+            L10n.F("GitHub refused the download ({0} {1}). Try again later.", (int)status, status),
+        HttpRequestException => L10n.T("Could not reach GitHub. Check the connection and try again."),
+        HttpIOException => L10n.T("The connection broke off before the download finished. Try again."),
+        IOException io when IsDiskFull(io) => L10n.F("There is not enough space in {0} for the download.", folder),
+        UnauthorizedAccessException or DirectoryNotFoundException => L10n.F("Composa cannot write to {0}.", folder),
+        IOException io => L10n.F("Composa could not write the download to {0}: {1}", folder, io.Message),
         _ => null,
     };
 

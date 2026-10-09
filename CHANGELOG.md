@@ -4,6 +4,13 @@ All notable changes to Composa are recorded here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [1.4.0+zh.1] - 2026-10-09
+
+### Added
+
+- English / 简体中文 interface selection in Help > Language / 语言. The saved selection takes effect after restarting Composa.
+- Simplified Chinese translations for menus, toolbars, status hints, the Layers and History panels, and major dialogs.
+
 ## [1.4.0] - 2026-10-03
 
 Models that run on your own machine, and the first features taken from Lolly: Select Subject, Object Selection and Remove Background find the subject of an ordinary photo, Image Size enlarges with invented detail, a Color Lookup adjustment with bundled film looks and a `.cube` export, and GIMP files open as layers.

@@ -33,7 +33,7 @@ public static class Ui
     public static Button IconButton(Icons.Icon icon, string tip, Action click, double size = 16)
     {
         var button = new Button { Content = Icons.Create(icon, size), Classes = { "flat" } };
-        ToolTip.SetTip(button, tip);
+        ToolTip.SetTip(button, L10n.T(tip));
         button.Click += (_, _) => click();
         return button;
     }
@@ -56,7 +56,8 @@ public static class Ui
     public static ComboBox Combo<T>(IEnumerable<T> items, T selected, Func<T, string> label, Action<T> changed, double width = 130)
     {
         var list = items.ToList();
-        var combo = new ComboBox { ItemsSource = list.Select(label).ToList(), SelectedIndex = list.IndexOf(selected), Width = width };
+        // Enum captions belong to the application; string items may be user-supplied names.
+        var combo = new ComboBox { ItemsSource = list.Select(item => typeof(T).IsEnum ? L10n.T(label(item)) : label(item)).ToList(), SelectedIndex = list.IndexOf(selected), Width = width };
         combo.SelectionChanged += (_, _) => { if (combo.SelectedIndex >= 0) changed(list[combo.SelectedIndex]); };
         return combo;
     }
@@ -86,7 +87,7 @@ public static class Ui
         label.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.SizeWestEast);
         // Only what a control draws is hit; a label without a background would take the pointer on its glyphs alone.
         if (label is TextBlock { Background: null } text) text.Background = Brushes.Transparent;
-        ToolTip.SetTip(label, "Drag to change the value (Alt: finer)");
+        ToolTip.SetTip(label, L10n.T("Drag to change the value (Alt: finer)"));
         ToolTip.SetShowDelay(label, 450);
         double pressX = 0, lastX = 0, start = 0, travel = 0;
         bool pressed = false, dragging = false;

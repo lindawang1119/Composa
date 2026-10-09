@@ -28,7 +28,7 @@ public sealed class Shortcut(string id, string title, string group, KeyGesture? 
     /// <summary>What the shortcut reads as in a menu or the shortcuts window.</summary>
     public static string Label(KeyGesture? gesture)
     {
-        if (gesture == null) return "None";
+        if (gesture == null) return L10n.T("None");
         var key = gesture.Key switch
         {
             Key.OemPlus => "+", Key.OemMinus => "-", Key.OemOpenBrackets => "[", Key.OemCloseBrackets => "]", Key.OemQuotes => "'", Key.OemSemicolon => ";",
@@ -54,10 +54,10 @@ public static class ShortcutsDialog
         var draft = listed.ToDictionary(s => s.Id, s => s.Gesture);
         Shortcut? recording = null;
         var buttons = new Dictionary<string, Button>();
-        var problem = Ui.Label("", new SolidColorBrush(Color.Parse("#FFB454")));
+        var problem = Ui.Label(L10n.T(""), new SolidColorBrush(Color.Parse("#FFB454")));
         problem.TextWrapping = TextWrapping.Wrap;
         problem.MaxWidth = 560;
-        var search = new TextBox { PlaceholderText = "Search shortcuts", Width = 300 };
+        var search = new TextBox { PlaceholderText = L10n.T("Search shortcuts"), Width = 300 };
         var rows = new StackPanel { Spacing = 2 };
         DialogWindow? dialog = null;
 
@@ -69,7 +69,7 @@ public static class ShortcutsDialog
                 var gesture = draft[shortcut.Id];
                 if (gesture == null) continue;
                 var key = gesture.ToString();
-                if (seen.TryGetValue(key, out var other)) return $"{Shortcut.Label(gesture)} is assigned to both {other} and {shortcut.Title}.";
+                if (seen.TryGetValue(key, out var other)) return L10n.F("{0} is assigned to both {1} and {2}.", Shortcut.Label(gesture), L10n.T(other), L10n.T(shortcut.Title));
                 seen[key] = shortcut.Title;
             }
             return null;
@@ -80,7 +80,7 @@ public static class ShortcutsDialog
             foreach (var shortcut in listed)
             {
                 var button = buttons[shortcut.Id];
-                button.Content = recording == shortcut ? "Press keys…" : Shortcut.Label(draft[shortcut.Id]);
+                button.Content = recording == shortcut ? L10n.T("Press keys…") : Shortcut.Label(draft[shortcut.Id]);
                 button.Classes.Set("accent", recording == shortcut);
             }
             var text = Problem();
@@ -95,9 +95,9 @@ public static class ShortcutsDialog
             var filter = search.Text?.Trim() ?? "";
             foreach (var group in new[] { "Menus", "Tools and Canvas" })
             {
-                var matching = listed.Where(s => s.Group == group && (filter.Length == 0 || s.Title.Contains(filter, StringComparison.OrdinalIgnoreCase))).ToList();
+                var matching = listed.Where(s => s.Group == group && (filter.Length == 0 || (s.Title.Contains(filter, StringComparison.OrdinalIgnoreCase) || L10n.T(s.Title).Contains(filter, StringComparison.OrdinalIgnoreCase)))).ToList();
                 if (matching.Count == 0) continue;
-                var heading = Ui.Label(group, weight: FontWeight.SemiBold);
+                var heading = Ui.Label(L10n.T(group), weight: FontWeight.SemiBold);
                 heading.Margin = new Thickness(0, 8, 0, 4);
                 rows.Children.Add(heading);
                 foreach (var shortcut in matching)
@@ -106,7 +106,7 @@ public static class ShortcutsDialog
                     button.Click += (_, _) => { recording = recording == shortcut ? null : shortcut; Refresh(); };
                     buttons[shortcut.Id] = button;
                     var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Width = 560 };
-                    var title = Ui.Label(shortcut.Title);
+                    var title = Ui.Label(L10n.T(shortcut.Title));
                     grid.Children.Add(title);
                     Grid.SetColumn(button, 1);
                     grid.Children.Add(button);
@@ -118,10 +118,10 @@ public static class ShortcutsDialog
         search.TextChanged += (_, _) => Build();
 
         var scroll = new ScrollViewer { Content = rows, Height = 420, Width = 590, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
-        var restore = Ui.TextButton("Restore Defaults", () => { foreach (var shortcut in listed) draft[shortcut.Id] = shortcut.Default; recording = null; Refresh(); });
+        var restore = Ui.TextButton(L10n.T("Restore Defaults"), () => { foreach (var shortcut in listed) draft[shortcut.Id] = shortcut.Default; recording = null; Refresh(); });
         var notes = new TextBlock
         {
-            Text = "Click a shortcut, then press its new key combination; Escape stops recording and Backspace clears it. Brush size and hardness ([ ] and { }), the opacity digits, Space to pan and the modifier-and-mouse gestures are fixed.",
+            Text = L10n.T("Click a shortcut, then press its new key combination; Escape stops recording and Backspace clears it. Brush size and hardness ([ ] and { }), the opacity digits, Space to pan and the modifier-and-mouse gestures are fixed."),
             Foreground = Palette.Secondary, TextWrapping = TextWrapping.Wrap, MaxWidth = 590
         };
         var body = Ui.Column(10, notes, Ui.Row(10, search, restore), scroll, problem);

@@ -88,7 +88,7 @@ public sealed partial class MainWindow : Window
 
         canvas.ViewChanged += UpdateStatus;
         canvas.PointerAt += point => positionText.Text = point is { } p ? $"{p.X}, {p.Y}" : "";
-        canvas.Problem += message => { problem = message; UpdateStatus(); };
+        canvas.Problem += message => { problem = L10n.T(message); UpdateStatus(); };
         canvas.ToolStateChanged += () => { refreshOptions?.Invoke(); UpdateColors(); };
         // Opening text from the canvas with another tool switches to the Type tool, so the toolbar has to follow.
         canvas.TextEditingChanged += () => { if (session != null) ShowTool(session.Tool); RebuildOptions(); UpdateStatus(); };
@@ -122,9 +122,9 @@ public sealed partial class MainWindow : Window
     {
         var abandoned = recovery!.FindAbandoned();
         if (abandoned.Count == 0) return;
-        var names = string.Join("\n", abandoned.Select(e => $"• {e.Title} (autosaved {e.SavedAt:g})"));
-        var recover = await Dialogs.Prompts.Confirm(this, "Recover Unsaved Work",
-            $"Composa did not close normally last time. These documents had unsaved changes:\n\n{names}\n\nRecover them? Choosing Cancel discards the autosaved copies.", "Recover");
+        var names = string.Join("\n", abandoned.Select(e => L10n.F("• {0} (autosaved {1:g})", e.Title, e.SavedAt)));
+        var recover = await Dialogs.Prompts.Confirm(this, L10n.T("Recover Unsaved Work"),
+            L10n.F("Composa did not close normally last time. These documents had unsaved changes:\n\n{0}\n\nRecover them? Choosing Cancel discards the autosaved copies.", names), L10n.T("Recover"));
         foreach (var entry in abandoned)
         {
             if (recover)
@@ -138,7 +138,7 @@ public sealed partial class MainWindow : Window
                 }
                 catch (Exception error)
                 {
-                    await Dialogs.Prompts.Alert(this, "Couldn't recover " + entry.Title, error.Message + "\n\nThe autosaved copy was kept at " + entry.ProjectPath);
+                    await Dialogs.Prompts.Alert(this, L10n.F("Couldn't recover {0}", entry.Title), L10n.F("{0}\n\nThe autosaved copy was kept at {1}", error.Message, entry.ProjectPath));
                     continue;
                 }
             }
@@ -272,7 +272,7 @@ public sealed partial class MainWindow : Window
     {
         MenuItem Entry(string header, Action run, bool enabled = true)
         {
-            var entry = new MenuItem { Header = header, IsEnabled = enabled };
+            var entry = new MenuItem { Header = L10n.T(header), IsEnabled = enabled };
             entry.Click += (_, _) => run();
             return entry;
         }
@@ -303,7 +303,7 @@ public sealed partial class MainWindow : Window
     private async Task ShowInFolder(string path)
     {
         if (!await FileReveal.Show(path, Launcher))
-            ShowProblem("Couldn't open the folder " + (Path.GetDirectoryName(Path.GetFullPath(path)) ?? path) + ".");
+            ShowProblem(L10n.F("Couldn't open the folder {0}.", Path.GetDirectoryName(Path.GetFullPath(path)) ?? path));
     }
 
     private async Task<bool> CloseSession(EditorSession item)
@@ -380,7 +380,7 @@ public sealed partial class MainWindow : Window
     {
         var connected = aiControl?.Connections ?? 0;
         aiText.IsVisible = connected > 0;
-        aiText.Text = connected == 1 ? "AI connected" : $"{connected} AIs connected";
+        aiText.Text = connected == 1 ? L10n.T("AI connected") : L10n.F("{0} AIs connected", connected);
     }
 
     private async void OnClosing(object? sender, WindowClosingEventArgs e)
@@ -416,11 +416,11 @@ public sealed partial class MainWindow : Window
 
     private Control BuildTabBar()
     {
-        var newButton = Ui.IconButton(Icons.Plus, "New canvas (Ctrl+N)", () => _ = NewCanvas());
+        var newButton = Ui.IconButton(Icons.Plus, L10n.T("New canvas (Ctrl+N)"), () => _ = NewCanvas());
         var scroll = new ScrollViewer { Content = tabs, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };
         var zoomControls = Ui.Row(2,
-            Ui.TextButton("Fit", () => canvas.Fit()), Ui.TextButton("100%", () => canvas.ZoomTo(1)),
-            Ui.IconButton(Icons.ZoomOut, "Zoom out (Ctrl+-)", canvas.ZoomOut), Ui.IconButton(Icons.ZoomIn, "Zoom in (Ctrl++)", canvas.ZoomIn));
+            Ui.TextButton(L10n.T("Fit"), () => canvas.Fit()), Ui.TextButton(L10n.T("100%"), () => canvas.ZoomTo(1)),
+            Ui.IconButton(Icons.ZoomOut, L10n.T("Zoom out (Ctrl+-)"), canvas.ZoomOut), Ui.IconButton(Icons.ZoomIn, L10n.T("Zoom in (Ctrl++)"), canvas.ZoomIn));
         foreach (var button in zoomControls.Children.OfType<Button>()) { button.MinWidth = 0; button.Classes.Add("flat"); }
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Background = Palette.Window, Margin = new Thickness(6, 2) };
         grid.Children.Add(newButton);
@@ -446,7 +446,7 @@ public sealed partial class MainWindow : Window
     private IReadOnlyList<ToolChoice> ToolGroup(Tool tool)
     {
         ToolChoice Choice(string name, Icons.Icon icon, string key, Func<EditorSession, bool> isCurrent, Action<EditorSession> apply) => new(
-            name, icon, () => toolKeys.FirstOrDefault(k => k.Id == key)?.Gesture, () => session != null && isCurrent(session),
+            L10n.T(name), icon, () => toolKeys.FirstOrDefault(k => k.Id == key)?.Gesture, () => session != null && isCurrent(session),
             () =>
             {
                 if (session == null) return;
@@ -485,15 +485,15 @@ public sealed partial class MainWindow : Window
         var rail = new StackPanel { Spacing = 2, Margin = new Thickness(0, 8, 0, 8), HorizontalAlignment = HorizontalAlignment.Center };
         foreach (var (tool, icon, tip) in ToolList)
         {
-            var button = new ToolButton(icon, tip, ToolGroup(tool));
+            var button = new ToolButton(icon, L10n.T(tip), ToolGroup(tool));
             button.Click += (_, _) => SelectTool(tool);
             toolButtons[tool] = button;
             rail.Children.Add(button);
         }
 
         foregroundSwatch.Cursor = backgroundSwatch.Cursor = new Cursor(StandardCursorType.Hand);
-        ToolTip.SetTip(foregroundSwatch, "Foreground color");
-        ToolTip.SetTip(backgroundSwatch, "Background color");
+        ToolTip.SetTip(foregroundSwatch, L10n.T("Foreground color"));
+        ToolTip.SetTip(backgroundSwatch, L10n.T("Background color"));
         foregroundSwatch.PointerPressed += (_, _) => _ = PickColor(foreground: true);
         backgroundSwatch.PointerPressed += (_, _) => _ = PickColor(foreground: false);
         backgroundSwatch.Margin = new Thickness(14, 14, 0, 0);
@@ -501,7 +501,7 @@ public sealed partial class MainWindow : Window
         foregroundSwatch.VerticalAlignment = backgroundSwatch.VerticalAlignment = VerticalAlignment.Top;
         var swatches = new Panel { Width = 42, Height = 42, Margin = new Thickness(0, 8, 0, 0), Children = { backgroundSwatch, foregroundSwatch } };
         rail.Children.Add(swatches);
-        var swap = Ui.IconButton(Icons.Swap, "Swap colors (X) · D resets to black and white", () => { session?.SwapColors(); UpdateColors(); }, 14);
+        var swap = Ui.IconButton(Icons.Swap, L10n.T("Swap colors (X) · D resets to black and white"), () => { session?.SwapColors(); UpdateColors(); }, 14);
         swap.HorizontalAlignment = HorizontalAlignment.Center;
         rail.Children.Add(swap);
 
@@ -532,17 +532,17 @@ public sealed partial class MainWindow : Window
 
     private Panel BuildWelcome()
     {
-        var title = Ui.Label("Composa", size: 26, weight: FontWeight.SemiBold);
+        var title = Ui.Label(L10n.T("Composa"), size: 26, weight: FontWeight.SemiBold);
         title.HorizontalAlignment = HorizontalAlignment.Center;
-        var subtitle = Ui.Label("Create a canvas, open a project or image, or drop files here.", Palette.Secondary);
+        var subtitle = Ui.Label(L10n.T("Create a canvas, open a project or image, or drop files here."), Palette.Secondary);
         subtitle.HorizontalAlignment = HorizontalAlignment.Center;
-        var buttons = Ui.Row(10, Ui.TextButton("New Canvas…", () => _ = NewCanvas(), accent: true), Ui.TextButton("Open…", () => _ = Open()));
+        var buttons = Ui.Row(10, Ui.TextButton(L10n.T("New Canvas…"), () => _ = NewCanvas(), accent: true), Ui.TextButton(L10n.T("Open…"), () => _ = Open()));
         buttons.HorizontalAlignment = HorizontalAlignment.Center;
         var box = Ui.Column(14, title, subtitle, buttons);
         var recent = settings.RecentFiles.Where(p => File.Exists(p) || Directory.Exists(p)).Take(6).ToList();
         if (recent.Count > 0)
         {
-            var heading = Ui.Label("Recent", Palette.Secondary);
+            var heading = Ui.Label(L10n.T("Recent"), Palette.Secondary);
             heading.HorizontalAlignment = HorizontalAlignment.Center;
             heading.Margin = new Thickness(0, 18, 0, 0);
             box.Children.Add(heading);
@@ -574,7 +574,7 @@ public sealed partial class MainWindow : Window
         var editing = foreground ? target.TextEdit : null;
         var original = target.CurrentTextStyle;
         void Recolor(SKColor color) { if (editing != null && target.TextEdit == editing) target.SetTextColor((uint)color | 0xFF000000); }
-        var picked = await Dialogs.Prompts.Color(this, foreground ? "Foreground Color" : "Background Color", foreground ? target.Foreground : target.Background, editing != null ? Recolor : null);
+        var picked = await Dialogs.Prompts.Color(this, L10n.T(foreground ? "Foreground Color" : "Background Color"), foreground ? target.Foreground : target.Background, editing != null ? Recolor : null);
         if (picked is not { } color)
         {
             if (editing != null && target.TextEdit == editing) target.RestoreTextColors(original);
@@ -624,34 +624,34 @@ public sealed partial class MainWindow : Window
         {
             zoomText.Text = "";
             sizeText.Text = "";
-            hintText.Text = "Ready when you are";
+            hintText.Text = L10n.T("Ready when you are");
             return;
         }
         zoomText.Text = canvas.Zoom >= 0.1 ? $"{canvas.Zoom * 100:0.#}%" : $"{canvas.Zoom * 100:0.##}%";
         sizeText.Text = $"{session.Document.Width} × {session.Document.Height} px · {session.Document.Resolution:0.#} ppi · sRGB";
-        hintText.Text = problem ?? (saving.Count > 0 ? "Saving " + string.Join(", ", saving.Values.Select(w => Path.GetFileName(w.Path))) + "…" : note ?? Hint(session));
+        hintText.Text = problem ?? (saving.Count > 0 ? L10n.F("Saving {0}…", string.Join(", ", saving.Values.Select(w => Path.GetFileName(w.Path)))) : note ?? Hint(session));
         hintText.Foreground = problem != null ? new SolidColorBrush(Color.Parse("#FFB454")) : Palette.Secondary;
     }
 
-    private static string Hint(EditorSession s) => s.Tool == Tool.Move ? ToolHint(s) : ToolHint(s) + " · Ctrl-drag moves the layer";
+    private static string Hint(EditorSession s) => s.Tool == Tool.Move ? ToolHint(s) : ToolHint(s) + L10n.T(" · Ctrl-drag moves the layer");
 
     private static string ToolHint(EditorSession s) => s.Tool switch
     {
-        Tool.Move => "Drag to move · Handles resize (Shift free, Alt from center) · Outside a corner rotates · Ctrl-drag a corner distorts · Ctrl-click picks a layer · 1–0 opacity",
-        Tool.Marquee => "Drag to select · Shift add · Alt subtract · Shift+Alt intersect · Drag inside to move · Delete clears · Ctrl+D deselect",
-        Tool.Lasso => s.LassoKind == LassoKind.Freehand ? "Drag to select · Shift add · Alt subtract · Drag inside to move" : "Click corners · Click the start, double-click or Enter to close · Backspace removes a corner · Escape cancels",
-        Tool.Wand => s.WandMode == WandMode.Object ? "Click an object to select its outline · Drag a box around a small one · Tab for Wand · Shift add · Alt subtract" : "Click to select similar colors · Tab for Object · Shift add · Alt subtract",
-        Tool.Crop => "Drag to crop · Shift keeps proportions · Alt symmetric · Enter applies · Escape cancels",
-        Tool.Brush => (s.EraserMode ? "Drag to erase" : "Drag to paint · Alt-click picks a color") + " · Shift-click draws a line · [ ] size · { } hardness · 1–0 opacity",
-        Tool.SpotHealing => "Drag over blemishes to heal · [ ] size",
-        Tool.CloneStamp => "Alt-click sets the source · Drag to clone · [ ] size · 1–0 opacity",
-        Tool.Smear => "Drag to " + (s.SmearMode == SmearMode.Liquify ? "push pixels" : s.SmearMode.ToString().ToLowerInvariant()) + " · [ ] size · 1–0 strength",
-        Tool.Gradient => "Drag to draw from foreground to " + (s.GradientToTransparent ? "transparent" : "background") + " · Drag an end to adjust · Shift snaps to 45° · Enter applies · Escape cancels",
-        Tool.Shape => s.ShapeKind == ShapeKind.Line ? "Drag to draw a line on a new layer · Shift snaps to 45° · Tab for the next shape" : "Drag to draw a shape on a new layer · Shift square · Alt from center · Tab for the next shape",
-        Tool.Text => s.IsEditingText ? "Type · Drag the box's handles to resize it · Alt+arrows tracking and leading · Ctrl+Enter finishes · Escape cancels" : "Click for point text · Drag a box for paragraph text · Click text to edit it",
-        Tool.Eyedropper => "Click to pick the foreground color · Alt-click for the background",
-        Tool.Hand => "Drag to pan · Ctrl+wheel zooms",
-        _ => "Click to zoom in · Alt-click to zoom out · Drag right or left to zoom smoothly"
+        Tool.Move => L10n.T("Drag to move · Handles resize (Shift free, Alt from center) · Outside a corner rotates · Ctrl-drag a corner distorts · Ctrl-click picks a layer · 1–0 opacity"),
+        Tool.Marquee => L10n.T("Drag to select · Shift add · Alt subtract · Shift+Alt intersect · Drag inside to move · Delete clears · Ctrl+D deselect"),
+        Tool.Lasso => s.LassoKind == LassoKind.Freehand ? L10n.T("Drag to select · Shift add · Alt subtract · Drag inside to move") : L10n.T("Click corners · Click the start, double-click or Enter to close · Backspace removes a corner · Escape cancels"),
+        Tool.Wand => s.WandMode == WandMode.Object ? L10n.T("Click an object to select its outline · Drag a box around a small one · Tab for Wand · Shift add · Alt subtract") : L10n.T("Click to select similar colors · Tab for Object · Shift add · Alt subtract"),
+        Tool.Crop => L10n.T("Drag to crop · Shift keeps proportions · Alt symmetric · Enter applies · Escape cancels"),
+        Tool.Brush => (s.EraserMode ? L10n.T("Drag to erase") : L10n.T("Drag to paint · Alt-click picks a color")) + L10n.T(" · Shift-click draws a line · [ ] size · { } hardness · 1–0 opacity"),
+        Tool.SpotHealing => L10n.T("Drag over blemishes to heal · [ ] size"),
+        Tool.CloneStamp => L10n.T("Alt-click sets the source · Drag to clone · [ ] size · 1–0 opacity"),
+        Tool.Smear => L10n.F("Drag to {0} · [ ] size · 1–0 strength", s.SmearMode == SmearMode.Liquify ? L10n.T("push pixels") : L10n.T(s.SmearMode.ToString().ToLowerInvariant())),
+        Tool.Gradient => L10n.F("Drag to draw from foreground to {0} · Drag an end to adjust · Shift snaps to 45° · Enter applies · Escape cancels", L10n.T(s.GradientToTransparent ? "transparent" : "background")),
+        Tool.Shape => s.ShapeKind == ShapeKind.Line ? L10n.T("Drag to draw a line on a new layer · Shift snaps to 45° · Tab for the next shape") : L10n.T("Drag to draw a shape on a new layer · Shift square · Alt from center · Tab for the next shape"),
+        Tool.Text => s.IsEditingText ? L10n.T("Type · Drag the box's handles to resize it · Alt+arrows tracking and leading · Ctrl+Enter finishes · Escape cancels") : L10n.T("Click for point text · Drag a box for paragraph text · Click text to edit it"),
+        Tool.Eyedropper => L10n.T("Click to pick the foreground color · Alt-click for the background"),
+        Tool.Hand => L10n.T("Drag to pan · Ctrl+wheel zooms"),
+        _ => L10n.T("Click to zoom in · Alt-click to zoom out · Drag right or left to zoom smoothly")
     };
 
     private bool reportingFailure;
@@ -669,8 +669,8 @@ public sealed partial class MainWindow : Window
         {
             try
             {
-                await Dialogs.Prompts.Alert(this, "Something went wrong",
-                    $"{error.GetType().Name}: {error.Message}\n\nThe last action may not have completed. Your document is still open; saving a copy now (File > Save As) is a good idea.");
+                await Dialogs.Prompts.Alert(this, L10n.T("Something went wrong"),
+                    L10n.F("{0}: {1}\n\nThe last action may not have completed. Your document is still open; saving a copy now (File > Save As) is a good idea.", error.GetType().Name, error.Message));
             }
             finally { reportingFailure = false; }
         }
@@ -678,13 +678,13 @@ public sealed partial class MainWindow : Window
 
     public void ShowProblem(string message)
     {
-        problem = message;
+        problem = L10n.T(message);
         UpdateStatus();
     }
 
     private void ShowNote(string message)
     {
-        note = message;
+        note = L10n.T(message);
         UpdateStatus();
     }
 }

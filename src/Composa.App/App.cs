@@ -9,6 +9,7 @@ public sealed class App : Application
 {
     public override void Initialize()
     {
+        L10n.Language = Settings.Load().Language;
         RequestedThemeVariant = ThemeVariant.Dark;
         Styles.Add(new FluentTheme { DensityStyle = DensityStyle.Compact });
         Styles.Add(new Avalonia.Markup.Xaml.Styling.StyleInclude(new Uri("avares://composa/")) { Source = new Uri("avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml") });

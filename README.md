@@ -1,5 +1,8 @@
 # Composa
 
+This is an unofficial Simplified Chinese community fork based on upstream Composa v1.4.0.
+See [简体中文使用说明](README.zh-CN.md) for language switching and the Windows x64 portable build.
+
 A layer-based image editor for compositing and retouching, with Photoshop-style tools and shortcuts. It is a from-scratch implementation of [Compositor](https://github.com/robbietilton/Compositor), Robbie Tilton's free and open-source macOS app.
 
 https://github.com/user-attachments/assets/e215c376-2bb3-44d2-af26-3117d2c70348

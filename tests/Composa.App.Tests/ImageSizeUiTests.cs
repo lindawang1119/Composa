@@ -96,7 +96,9 @@ public class ImageSizeUiTests
             // A larger layer, so the model takes several tiles and the window is up long enough to cancel.
             var big = Pixels.NewColor(600, 400);
             big.Erase(SKColors.Teal);
-            session.AddImageLayer("big", big, new SKPoint(30, 20));
+            // Keep the source at full size: fitting it into this 60×40 canvas makes the model skip it,
+            // leaving only tiny jobs that can finish before Escape reaches the progress window.
+            session.AddImageLayer("big", big, new SKPoint(30, 20), fit: false);
             var before = session.History.CurrentId;
             var task = window.ResizeImage(session, 1200, 800, 72, ResampleMode.Enhance);
             PumpUntil(() => window.OwnedWindows.OfType<ProgressWindow>().Any(w => w.IsVisible), 5);

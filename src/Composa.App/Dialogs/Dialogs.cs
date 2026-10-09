@@ -18,17 +18,17 @@ public class DialogWindow : Window
 
     public DialogWindow(string title, Control body, string okText = "OK", bool cancellable = true)
     {
-        Title = title;
+        Title = L10n.T(title);
         SizeToContent = SizeToContent.WidthAndHeight;
         CanResize = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ShowInTaskbar = false;
-        ok = Ui.TextButton(okText, Accept, accent: true);
+        ok = Ui.TextButton(L10n.T(okText), Accept, accent: true);
         ok.IsDefault = true;
         Buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 16, 0, 0) };
         if (cancellable)
         {
-            var cancel = Ui.TextButton("Cancel", Reject);
+            var cancel = Ui.TextButton(L10n.T("Cancel"), Reject);
             cancel.IsCancel = true;
             Buttons.Children.Add(cancel);
         }
@@ -56,17 +56,17 @@ public class DialogWindow : Window
 public static class Prompts
 {
     public static Task<bool> Confirm(Window owner, string title, string message, string okText = "OK") =>
-        new DialogWindow(title, new TextBlock { Text = message, MaxWidth = 420, TextWrapping = TextWrapping.Wrap }, okText).Ask(owner);
+        new DialogWindow(title, new TextBlock { Text = L10n.T(message), MaxWidth = 420, TextWrapping = TextWrapping.Wrap }, okText).Ask(owner);
 
     public static Task Alert(Window owner, string title, string message) =>
-        new DialogWindow(title, new TextBlock { Text = message, MaxWidth = 460, TextWrapping = TextWrapping.Wrap }, cancellable: false).Ask(owner);
+        new DialogWindow(title, new TextBlock { Text = L10n.T(message), MaxWidth = 460, TextWrapping = TextWrapping.Wrap }, cancellable: false).Ask(owner);
 
     /// <summary>Save / Don't Save / Cancel. Returns null for cancel.</summary>
     public static async Task<bool?> SaveChanges(Window owner, string name)
     {
-        var dialog = new DialogWindow("Unsaved Changes", new TextBlock { Text = $"Save changes to \"{name}\" before closing?", MaxWidth = 420, TextWrapping = TextWrapping.Wrap }, "Save");
+        var dialog = new DialogWindow("Unsaved Changes", new TextBlock { Text = L10n.F("Save changes to \"{0}\" before closing?", name), MaxWidth = 420, TextWrapping = TextWrapping.Wrap }, "Save");
         bool? result = null;
-        var discard = Ui.TextButton("Don't Save", () => { result = false; dialog.Close(false); });
+        var discard = Ui.TextButton(L10n.T("Don't Save"), () => { result = false; dialog.Close(false); });
         ((StackPanel)((StackPanel)dialog.Content!).Children[1]).Children.Insert(0, discard);
         if (await dialog.Ask(owner)) return true;
         return result;
@@ -76,7 +76,7 @@ public static class Prompts
     {
         var result = value;
         var box = Ui.Number(value, min, max, v => result = v, width: 120);
-        var dialog = new DialogWindow(title, Ui.Row(10, Ui.Scrub(Ui.Label(label), box), box, Ui.Label(unit, Palette.Secondary)));
+        var dialog = new DialogWindow(title, Ui.Row(10, Ui.Scrub(Ui.Label(L10n.T(label)), box), box, Ui.Label(unit, Palette.Secondary)));
         dialog.Opened += (_, _) => box.Focus();
         return await dialog.Ask(owner) ? result : null;
     }
@@ -92,11 +92,12 @@ public static class Prompts
             Color = initial.ToAvalonia(), IsAlphaEnabled = false, IsAlphaVisible = false, IsColorPaletteVisible = true,
             IsColorModelVisible = true, IsHexInputVisible = true, Width = 360, ColorSpectrumComponents = ColorSpectrumComponents.SaturationValue
         };
+        ColorPickerLocalization.Attach(view);
         if (preview != null) view.ColorChanged += (_, e) => preview(e.NewColor.ToSkia().WithAlpha(255));
         var swatches = Ui.Row(0,
             new Border { Width = 60, Height = 28, Background = new SolidColorBrush(initial.ToAvalonia()) },
             new Border { Width = 60, Height = 28, [!Border.BackgroundProperty] = view.GetObservable(ColorView.ColorProperty).Select(c => (IBrush)new SolidColorBrush(c)).ToBinding() });
-        var body = Ui.Column(10, view, Ui.Row(10, Ui.Label("Before / After", Palette.Secondary), swatches));
+        var body = Ui.Column(10, view, Ui.Row(10, Ui.Label(L10n.T("Before / After"), Palette.Secondary), swatches));
         return await new DialogWindow(title, body).Ask(owner) ? view.Color.ToSkia().WithAlpha(255) : null;
     }
 
@@ -132,7 +133,7 @@ public static class CanvasDialogs
         ("A4 at 300 ppi", 2480, 3508), ("Photo 6000 × 4000", 6000, 4000)
     ];
 
-    private static string PresetLabel((string Name, int W, int H) preset) => preset.W == 0 || preset.Name.Contains('×') ? preset.Name : $"{preset.Name}  {preset.W} × {preset.H}";
+    private static string PresetLabel((string Name, int W, int H) preset) => preset.W == 0 || preset.Name.Contains('×') ? L10n.T(preset.Name) : $"{L10n.T(preset.Name)}  {preset.W} × {preset.H}";
 
     /// <summary>
     /// With the size of the image on the clipboard, the dialog opens on a Clipboard preset of that size, listed first,
@@ -168,8 +169,8 @@ public static class CanvasDialogs
         }
         widthBox.ValueChanged += FollowSize;
         heightBox.ValueChanged += FollowSize;
-        var background = Ui.Combo(new[] { "Transparent", "White", "Background color" }, "Transparent", s => s, s => fill = s == "White" ? 1 : s == "Transparent" ? 0 : 2, 220);
-        var grid = Form(("Preset", preset), ("Width", Ui.Row(6, widthBox, Ui.Label("px", Palette.Secondary))), ("Height", Ui.Row(6, heightBox, Ui.Label("px", Palette.Secondary))), ("Background", background));
+        var background = Ui.Combo(new[] { "Transparent", "White", "Background color" }, "Transparent", s => L10n.T(s), s => fill = s == "White" ? 1 : s == "Transparent" ? 0 : 2, 220);
+        var grid = Form(("Preset", preset), ("Width", Ui.Row(6, widthBox, Ui.Label(L10n.T("px"), Palette.Secondary))), ("Height", Ui.Row(6, heightBox, Ui.Label(L10n.T("px"), Palette.Secondary))), ("Background", background));
         if (!await new DialogWindow("New Canvas", grid, "Create").Ask(owner)) return null;
         return new NewCanvasResult(width, height, fill == 0 ? null : fill == 1 ? SKColors.White : backgroundColor);
     }
@@ -181,7 +182,7 @@ public static class CanvasDialogs
         var relative = false;
         var widthBox = Ui.Number(width, -DocumentLimits.MaxSide, DocumentLimits.MaxSide, v => width = (int)v, width: 120);
         var heightBox = Ui.Number(height, -DocumentLimits.MaxSide, DocumentLimits.MaxSide, v => height = (int)v, width: 120);
-        var relativeBox = Ui.Check("Relative", false, v =>
+        var relativeBox = Ui.Check(L10n.T("Relative"), false, v =>
         {
             relative = v;
             widthBox.Value = v ? 0 : currentWidth;
@@ -201,8 +202,8 @@ public static class CanvasDialogs
             anchors.Children.Add(button);
         }
         var body = Ui.Column(12,
-            Ui.Label($"Current size: {currentWidth} × {currentHeight} px", Palette.Secondary),
-            Form(("Width", Ui.Row(6, widthBox, Ui.Label("px", Palette.Secondary))), ("Height", Ui.Row(6, heightBox, Ui.Label("px", Palette.Secondary))), ("", relativeBox), ("Anchor", anchors)));
+            Ui.Label(L10n.F("Current size: {0} × {1} px", currentWidth, currentHeight), Palette.Secondary),
+            Form(("Width", Ui.Row(6, widthBox, Ui.Label(L10n.T("px"), Palette.Secondary))), ("Height", Ui.Row(6, heightBox, Ui.Label(L10n.T("px"), Palette.Secondary))), ("", relativeBox), ("Anchor", anchors)));
         if (!await new DialogWindow("Canvas Size", body).Ask(owner)) return null;
         if (relative) { width += currentWidth; height += currentHeight; }
         return (Math.Clamp(width, 1, DocumentLimits.MaxSide), Math.Clamp(height, 1, DocumentLimits.MaxSide), anchor);
@@ -210,11 +211,15 @@ public static class CanvasDialogs
 
     public static readonly ResampleMode[] ResampleModes = [ResampleMode.Automatic, ResampleMode.Nearest, ResampleMode.Enhance];
 
+    private static string EnhanceUnavailableReason() => Composa.Vision.ModelRunner.IsAvailable
+        ? L10n.F("The enlarging model is not installed ({0}).", Composa.Vision.UpscaleModels.General.Path)
+        : L10n.T(Composa.Vision.UpscaleModels.UnavailableReason ?? "");
+
     public static string ResampleName(ResampleMode mode) => mode switch
     {
-        ResampleMode.Nearest => "Nearest Neighbor",
-        ResampleMode.Enhance => "Enhance",
-        _ => "Automatic"
+        ResampleMode.Nearest => L10n.T("Nearest Neighbor"),
+        ResampleMode.Enhance => L10n.T("Enhance"),
+        _ => L10n.T("Automatic")
     };
 
     /// <param name="resample">The last Resample choice, which the dialog opens on; Enhance applies only when enlarging and the model is available.</param>
@@ -231,11 +236,11 @@ public static class CanvasDialogs
             var enlarging = width > currentWidth || height > currentHeight;
             note.Text = mode switch
             {
-                ResampleMode.Nearest => "Every pixel becomes a hard-edged block, which keeps pixel art crisp.",
-                ResampleMode.Enhance when !Composa.Vision.UpscaleModels.IsAvailable => Composa.Vision.UpscaleModels.UnavailableReason + " The picture is resampled as Automatic does.",
-                ResampleMode.Enhance when !enlarging => "Enhance only applies when enlarging; at this size the picture is resampled as Automatic does.",
-                ResampleMode.Enhance => "A model run on this machine enlarges each photo layer four times, inventing fine detail that was not there, then fits it to the new size. It takes about a second per 65,000 pixels of each layer; text and shapes are redrawn instead, and masks are resampled.",
-                _ => "Smooth when shrinking, sharp cubic when enlarging."
+                ResampleMode.Nearest => L10n.T("Every pixel becomes a hard-edged block, which keeps pixel art crisp."),
+                ResampleMode.Enhance when !Composa.Vision.UpscaleModels.IsAvailable => EnhanceUnavailableReason() + L10n.T(" The picture is resampled as Automatic does."),
+                ResampleMode.Enhance when !enlarging => L10n.T("Enhance only applies when enlarging; at this size the picture is resampled as Automatic does."),
+                ResampleMode.Enhance => L10n.T("A model run on this machine enlarges each photo layer four times, inventing fine detail that was not there, then fits it to the new size. It takes about a second per 65,000 pixels of each layer; text and shapes are redrawn instead, and masks are resampled."),
+                _ => L10n.T("Smooth when shrinking, sharp cubic when enlarging.")
             };
         }
         widthBox = Ui.Number(width, 1, DocumentLimits.MaxSide, v =>
@@ -252,12 +257,12 @@ public static class CanvasDialogs
         }, width: 120);
         var resolutionBox = Ui.Number(resolution, 1, 9600, v => resolution = v, width: 120);
         var modes = Ui.Combo(ResampleModes, mode, ResampleName, v => { mode = v; Describe(); }, 160);
-        ToolTip.SetTip(modes, "How the pixels are resampled: Automatic for most pictures, Nearest Neighbor for pixel art, Enhance to invent detail with a model while enlarging");
+        ToolTip.SetTip(modes, L10n.T("How the pixels are resampled: Automatic for most pictures, Nearest Neighbor for pixel art, Enhance to invent detail with a model while enlarging"));
         Describe();
         var body = Ui.Column(12,
-            Ui.Label($"Current size: {currentWidth} × {currentHeight} px", Palette.Secondary),
-            Form(("Width", Ui.Row(6, widthBox, Ui.Label("px", Palette.Secondary))), ("Height", Ui.Row(6, heightBox, Ui.Label("px", Palette.Secondary))),
-                ("", Ui.Check("Constrain proportions", true, v => constrain = v)), ("Resolution", Ui.Row(6, resolutionBox, Ui.Label("pixels/inch", Palette.Secondary))),
+            Ui.Label(L10n.F("Current size: {0} × {1} px", currentWidth, currentHeight), Palette.Secondary),
+            Form(("Width", Ui.Row(6, widthBox, Ui.Label(L10n.T("px"), Palette.Secondary))), ("Height", Ui.Row(6, heightBox, Ui.Label(L10n.T("px"), Palette.Secondary))),
+                ("", Ui.Check(L10n.T("Constrain proportions"), true, v => constrain = v)), ("Resolution", Ui.Row(6, resolutionBox, Ui.Label(L10n.T("pixels/inch"), Palette.Secondary))),
                 ("Resample", modes)),
             note);
         if (!await new DialogWindow("Image Size", body).Ask(owner)) return null;
@@ -269,7 +274,7 @@ public static class CanvasDialogs
     {
         var quality = initial;
         var preview = new Image { Width = 520, Height = 340, Stretch = Stretch.Uniform };
-        var info = Ui.Label("Measuring…", Palette.Secondary);
+        var info = Ui.Label(L10n.T("Measuring…"), Palette.Secondary);
         var generation = 0;
         var closed = false;
         Task inFlight = Task.CompletedTask;
@@ -280,7 +285,7 @@ public static class CanvasDialogs
             timer.Stop();
             var mine = ++generation;
             var q = quality;
-            info.Text = "Measuring…";
+            info.Text = L10n.T("Measuring…");
             // Encoding a large photo takes a moment, so it runs off the UI thread; a newer request supersedes this one.
             var work = Task.Run(() =>
             {
@@ -296,7 +301,7 @@ public static class CanvasDialogs
         }
 
         timer.Tick += (_, _) => Refresh();
-        var row = Ui.SliderField("Quality", initial, 1, 100, v => { quality = (int)v; timer.Stop(); timer.Start(); }, width: 380);
+        var row = Ui.SliderField(L10n.T("Quality"), initial, 1, 100, v => { quality = (int)v; timer.Stop(); timer.Start(); }, width: 380);
         var frame = new Border { Child = preview, Background = new SolidColorBrush(Color.Parse("#1A1A1A")), Padding = new Thickness(1) };
         var dialog = new DialogWindow("Export JPEG", Ui.Column(12, frame, row, info), "Export…");
         dialog.Opened += (_, _) => Refresh();
@@ -315,7 +320,7 @@ public static class CanvasDialogs
         for (var i = 0; i < rows.Length; i++)
         {
             grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            var label = Ui.Label(rows[i].Label, Palette.Secondary);
+            var label = Ui.Label(L10n.T(rows[i].Label), Palette.Secondary);
             if ((rows[i].Field as NumericUpDown ?? (rows[i].Field as Panel)?.Children.FirstOrDefault() as NumericUpDown) is { } number) Ui.Scrub(label, number);
             label.Margin = new Thickness(0, 6);
             Grid.SetRow(label, i);

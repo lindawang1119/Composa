@@ -1,0 +1,14 @@
+{
+  "{0} does not come from Composa's own release page, so it was not downloaded.": "{0} 并非来自 Composa 的官方发布页，因此没有下载。",
+  "This release has no list of checksums, so a download could not be checked. Download it from the release page instead.": "此版本没有校验值列表，无法验证下载文件。请从发布页下载。",
+  "The release's list of checksums does not mention {0}, so it could not be checked. Download it from the release page instead.": "此版本的校验值列表中没有 {0}，无法验证该文件。请从发布页下载。",
+  "The downloaded file did not match the release's checksum, so it was deleted. Try again, or download it from the release page.": "下载文件与发布的校验值不匹配，已删除。请重试或从发布页下载。",
+  "The download stalled: nothing arrived for {0:0} seconds. Try again later.": "下载已停滞：连续 {0:0} 秒没有收到数据。请稍后重试。",
+  "GitHub no longer has this file. The release page may have a newer one.": "GitHub 上已没有此文件。发布页可能有更新的版本。",
+  "GitHub refused the download ({0} {1}). Try again later.": "GitHub 拒绝了下载请求（{0} {1}）。请稍后重试。",
+  "Could not reach GitHub. Check the connection and try again.": "无法连接 GitHub。请检查网络连接后重试。",
+  "The connection broke off before the download finished. Try again.": "下载完成前连接已断开。请重试。",
+  "There is not enough space in {0} for the download.": "{0} 的可用空间不足，无法下载。",
+  "Composa cannot write to {0}.": "Composa 无法写入 {0}。",
+  "Composa could not write the download to {0}: {1}": "Composa 无法将下载文件写入 {0}：{1}"
+}

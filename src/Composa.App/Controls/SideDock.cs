@@ -94,13 +94,13 @@ public sealed class SideDock : UserControl
     private Control Build(DockSection section, bool open)
     {
         var chevron = Icons.Create(open ? Icons.ChevronDown : Icons.ChevronRight, 12, Palette.Secondary);
-        var title = Ui.Label(section.Title, weight: FontWeight.SemiBold);
+        var title = Ui.Label(L10n.T(section.Title), weight: FontWeight.SemiBold);
         var header = new Border
         {
             Background = Brushes.Transparent, Cursor = new Cursor(StandardCursorType.Hand), Padding = new Thickness(8, 8, 10, 6),
             Child = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { chevron, title } }
         };
-        ToolTip.SetTip(header, open ? "Collapse " + section.Title : "Expand " + section.Title);
+        ToolTip.SetTip(header, L10n.F(open ? "Collapse {0}" : "Expand {0}", L10n.T(section.Title)));
         header.PointerPressed += (_, e) =>
         {
             if (!e.GetCurrentPoint(header).Properties.IsLeftButtonPressed) return;

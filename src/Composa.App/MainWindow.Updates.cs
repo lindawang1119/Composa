@@ -120,9 +120,8 @@ public sealed partial class MainWindow
     {
         if (UpdateCheck.Channel == UpdateChannel.Managed)
         {
-            await Prompts.Alert(this, "Check for Updates",
-                $"Composa {AppInfo.Version} was installed through your package manager, which is where updates come from. " +
-                "Use it to upgrade, rather than downloading a build that it does not know about.");
+            await Prompts.Alert(this, L10n.T("Check for Updates"),
+                L10n.F("Composa {0} was installed through your package manager, which is where updates come from. Use it to upgrade, rather than downloading a build that it does not know about.", AppInfo.Version));
             return;
         }
 
@@ -135,11 +134,11 @@ public sealed partial class MainWindow
                 break;
             case UpdateOutcome.Failed:
                 // Someone who asked deserves an answer, even when the answer is that it did not work.
-                await Prompts.Alert(this, "Check for Updates",
-                    "Could not reach the release page to check for a newer version. Please try again later.");
+                await Prompts.Alert(this, L10n.T("Check for Updates"),
+                    L10n.T("Could not reach the release page to check for a newer version. Please try again later."));
                 break;
             default:
-                await Prompts.Alert(this, "Check for Updates", $"Composa {AppInfo.Version} is the latest version.");
+                await Prompts.Alert(this, L10n.T("Check for Updates"), L10n.F("Composa {0} is the latest version.", AppInfo.Version));
                 break;
         }
     }
@@ -165,7 +164,7 @@ public sealed partial class MainWindow
             // mistaken for either. It still has to leave the strip, which would otherwise stay in
             // Downloading with nothing to cancel.
             Console.Error.WriteLine(error);
-            result = new DownloadResult(DownloadOutcome.Failed, Problem: $"The download failed: {error.GetType().Name}: {error.Message}");
+            result = new DownloadResult(DownloadOutcome.Failed, Problem: L10n.F("The download failed: {0}: {1}", error.GetType().Name, error.Message));
         }
         finally
         {
@@ -184,7 +183,7 @@ public sealed partial class MainWindow
                 updateNotice.Show(version, canDownload: true);
                 break;
             default:
-                updateNotice.ShowFailed(result.Problem ?? "The download failed.");
+                updateNotice.ShowFailed(result.Problem ?? L10n.T("The download failed."));
                 break;
         }
     }
@@ -194,8 +193,8 @@ public sealed partial class MainWindow
         if (downloadedPath is not { } path || pendingUpdateVersion is not { } version) return;
         var kind = pendingKind;
         string? hint = !Installer.HasOne(kind) ? null
-            : Installer.QuitsFirst(kind) ? "Quit Composa, asking about unsaved work as Quit does, and start the setup, which upgrades it in place"
-            : "Open the package in your software installer";
+            : Installer.QuitsFirst(kind) ? L10n.T("Quit Composa, asking about unsaved work as Quit does, and start the setup, which upgrades it in place")
+            : L10n.T("Open the package in your software installer");
         updateNotice.ShowReady(version, path, hint, Installer.TerminalCommand(kind, path));
     }
 
@@ -203,7 +202,7 @@ public sealed partial class MainWindow
     {
         if (downloadedPath is not { } path) return;
         var reveal = Updates.Reveal ?? (file => FileReveal.Show(file, Launcher));
-        if (!await reveal(path)) ShowProblem("Couldn't open the folder " + Path.GetDirectoryName(path) + ".");
+        if (!await reveal(path)) ShowProblem(L10n.F("Couldn't open the folder {0}.", Path.GetDirectoryName(path)));
     }
 
     private Task<bool> OpenFile(string path) => Updates.Open?.Invoke(path) ?? Launcher.LaunchFileInfoAsync(new FileInfo(path));
@@ -219,7 +218,7 @@ public sealed partial class MainWindow
         var kind = pendingKind;
         if (!File.Exists(path))
         {
-            updateNotice.ShowFailed($"{Path.GetFileName(path)} is no longer in {Path.GetDirectoryName(path)}.");
+            updateNotice.ShowFailed(L10n.F("{0} is no longer in {1}.", Path.GetFileName(path), Path.GetDirectoryName(path)));
             downloadedPath = null;
             return;
         }
@@ -228,7 +227,7 @@ public sealed partial class MainWindow
             if (!await ConfirmQuit()) return;
             if (!await Installer.Start(kind, path, Updates.Run, OpenFile))
             {
-                ShowProblem("Couldn't start " + Path.GetFileName(path) + ".");
+                ShowProblem(L10n.F("Couldn't start {0}.", Path.GetFileName(path)));
                 return;
             }
             closingConfirmed = true;
@@ -236,7 +235,7 @@ public sealed partial class MainWindow
             return;
         }
         if (!await Installer.Start(kind, path, Updates.Run, OpenFile))
-            ShowProblem($"No software installer opened {Path.GetFileName(path)}. Install it from a terminal with the command in the update strip.");
+            ShowProblem(L10n.F("No software installer opened {0}. Install it from a terminal with the command in the update strip.", Path.GetFileName(path)));
     }
 
     /// <summary>Cancels a download under way and waits until its partial file is gone.</summary>

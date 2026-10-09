@@ -51,7 +51,7 @@ public sealed class AngleDial : Control
         Focusable = true;
         Cursor = new Cursor(StandardCursorType.Hand);
         var what = style == AngleDialStyle.Line ? "The line is the direction; the dot marks the end the number counts towards" : "The hand points at the light; the shadow falls the other way";
-        ToolTip.SetTip(this, what + "\nDrag to turn it · Shift snaps to 15° · Arrow keys or scroll wheel turn by 1°");
+        ToolTip.SetTip(this, L10n.T(what) + "\n" + L10n.T("Drag to turn it · Shift snaps to 15° · Arrow keys or scroll wheel turn by 1°"));
         ToolTip.SetShowDelay(this, 450);
     }
 

@@ -25,7 +25,7 @@ public sealed class ProgressWindow : Window
         CanResize = false;
         ShowInTaskbar = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        var button = Ui.TextButton("Cancel", cancel);
+        var button = Ui.TextButton(L10n.T("Cancel"), cancel);
         button.IsCancel = true;
         Content = new StackPanel
         {
@@ -34,7 +34,7 @@ public sealed class ProgressWindow : Window
             Width = 300,
             Children =
             {
-                (text = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap }),
+                (text = new TextBlock { Text = L10n.T(message), TextWrapping = TextWrapping.Wrap }),
                 new ProgressBar { IsIndeterminate = true, Height = 6 },
                 new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Children = { button } }
             }
@@ -57,7 +57,7 @@ public sealed class ProgressWindow : Window
         using var cancellation = new CancellationTokenSource();
         ProgressWindow? window = null;
         var current = message;
-        var status = new Progress<string>(line => { current = line; if (window != null) window.text.Text = line; });
+        var status = new Progress<string>(line => { current = line; if (window != null) window.text.Text = L10n.T(line); });
         var task = work(cancellation.Token, status);
         if (await Task.WhenAny(task, Task.Delay(Delay)) != task)
         {

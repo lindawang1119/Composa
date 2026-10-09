@@ -6,6 +6,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Composa.App.Dialogs;
+using Composa.App.Controls;
 using Composa.Editing;
 using Composa.Filters;
 using Composa.Vision;
@@ -41,7 +42,7 @@ public sealed partial class MainWindow
 
         MenuItem Top(string header, params object[] items)
         {
-            var top = new MenuItem { Header = header };
+            var top = new MenuItem { Header = L10n.T(header) };
             foreach (var item in items) top.Items.Add(item);
             top.SubmenuOpened += (_, _) => RefreshMenuState();
             menu.Items.Add(top);
@@ -53,7 +54,7 @@ public sealed partial class MainWindow
             var guard = needsDocument ? () => HasDocument && (enabled?.Invoke() ?? true) : enabled;
             var command = new Shortcut(id ?? name.TrimEnd('…'), name.TrimEnd('…'), "Menus", gesture, run, guard);
             commands.Add(command);
-            var item = new MenuItem { Header = name, InputGesture = gesture };
+            var item = new MenuItem { Header = L10n.T(name), InputGesture = gesture };
             item.Click += (_, _) => Execute(command);
             command.Item = item;
             menuItems.Add((item, command));
@@ -61,7 +62,7 @@ public sealed partial class MainWindow
         }
         MenuItem Sub(string header, params object[] items)
         {
-            var sub = new MenuItem { Header = header };
+            var sub = new MenuItem { Header = L10n.T(header) };
             foreach (var item in items) sub.Items.Add(item);
             return sub;
         }
@@ -184,7 +185,7 @@ public sealed partial class MainWindow
             Item("Flip Layer Horizontal", () => session!.FlipLayers(true)),
             Item("Flip Layer Vertical", () => session!.FlipLayers(false)));
 
-        var grid = new MenuItem { Header = "Pixel Grid (800% and above)", ToggleType = MenuItemToggleType.CheckBox, IsChecked = canvas.ShowPixelGrid };
+        var grid = new MenuItem { Header = L10n.T("Pixel Grid (800% and above)"), ToggleType = MenuItemToggleType.CheckBox, IsChecked = canvas.ShowPixelGrid };
         grid.Click += (_, _) => { canvas.ShowPixelGrid = !canvas.ShowPixelGrid; grid.IsChecked = canvas.ShowPixelGrid; canvas.InvalidateVisual(); RememberToolSettings(); };
         // View options are flags on the session, so a checkmark follows the current tab.
         MenuItem ViewToggle(string name, Func<ViewOptions, bool> get, Func<ViewOptions, ViewOptions> flip, Key key = Key.None, KeyModifiers modifiers = KeyModifiers.None, string? id = null)
@@ -231,7 +232,7 @@ public sealed partial class MainWindow
         // A build from a repository leaves updates to its package manager, so there is nothing to switch on there.
         var autoUpdates = new MenuItem
         {
-            Header = "Check for Updates Automatically",
+            Header = L10n.T("Check for Updates Automatically"),
             ToggleType = MenuItemToggleType.CheckBox,
             IsChecked = settings.CheckForUpdates,
             IsEnabled = UpdateCheck.Channel == UpdateChannel.GitHub
@@ -244,7 +245,7 @@ public sealed partial class MainWindow
         };
 
         // The MCP server, through which an AI agent drives the editor. Off until switched on, and remembered.
-        var aiControl = new MenuItem { Header = "Allow AI Control", ToggleType = MenuItemToggleType.CheckBox, IsChecked = settings.AllowAiControl };
+        var aiControl = new MenuItem { Header = L10n.T("Allow AI Control"), ToggleType = MenuItemToggleType.CheckBox, IsChecked = settings.AllowAiControl };
         aiControl.Click += async (_, _) => { await SetAiControl(!AiControl); aiControl.IsChecked = settings.AllowAiControl; };
 
         MenuItem PanelToggle(string title)
@@ -256,15 +257,29 @@ public sealed partial class MainWindow
         }
         Top("_Window", PanelToggle("History"));
 
-        Top("_Help", Item("Keyboard Shortcuts…", () => _ = ShowShortcuts(), Key.F1, needsDocument: false),
+        var english = new MenuItem { Header = "English", ToggleType = MenuItemToggleType.Radio, IsChecked = L10n.Normalize(settings.Language) == "en" };
+        var chinese = new MenuItem { Header = "简体中文", ToggleType = MenuItemToggleType.Radio, IsChecked = L10n.Normalize(settings.Language) == "zh-CN" };
+        async Task ChooseLanguage(string language)
+        {
+            settings.Language = L10n.Normalize(language);
+            settings.Save();
+            english.IsChecked = settings.Language == "en";
+            chinese.IsChecked = settings.Language == "zh-CN";
+            if (settings.Language == L10n.Language) return;
+            await Prompts.Alert(this, "Language / 语言",
+                "Restart Composa to apply the selected language. Save your work before closing.\n\n请重启 Composa 以应用所选语言。关闭前请保存你的工作。");
+        }
+        english.Click += async (_, _) => await ChooseLanguage("en");
+        chinese.Click += async (_, _) => await ChooseLanguage("zh-CN");
+
+        Top("_Help", Sub("Language / 语言", english, chinese), Line(), Item("Keyboard Shortcuts…", () => _ = ShowShortcuts(), Key.F1, needsDocument: false),
             Item("Check for Updates…", () => _ = CheckForUpdatesNow(), needsDocument: false),
             autoUpdates,
             Line(),
             aiControl,
             Line(),
-            Item("About Composa", () => _ = Prompts.Alert(this, "About Composa",
-            $"Composa {AppInfo.Version}\n\nA layer-based image editor for compositing and retouching, built with .NET, Avalonia and Skia. " +
-            "It is a from-scratch implementation of the open-source macOS app Compositor by Robbie Tilton (MIT license)."), needsDocument: false));
+            Item("About Composa", () => _ = Prompts.Alert(this, L10n.T("About Composa"),
+            L10n.F("Composa {0}\n\nA layer-based image editor for compositing and retouching, built with .NET, Avalonia and Skia. It is a from-scratch implementation of the open-source macOS app Compositor by Robbie Tilton (MIT license).", AppInfo.Version)), needsDocument: false));
         BuildToolKeys();
         ApplyShortcutOverrides();
         return menu;
@@ -379,10 +394,10 @@ public sealed partial class MainWindow
         foreach (var (item, isChecked) in viewToggles) item.IsChecked = session != null && isChecked(session.View);
         foreach (var (item, section) in panelToggles) item.IsChecked = dock.Section(section).State.Visible;
         if (session == null) return;
-        undoItem!.Header = session.History.CanUndo ? $"Undo {session.History.UndoName}" : "Undo";
-        redoItem!.Header = session.History.CanRedo ? $"Redo {session.History.RedoName}" : "Redo";
-        mergeItem!.Header = session.MergeTitle;
-        clipItem!.Header = session.ActiveLayer?.Clipped == true ? "Release Clipping Mask" : "Create Clipping Mask";
+        undoItem!.Header = session.History.CanUndo ? L10n.F("Undo {0}", HistoryPanel.DisplayName(session.History.UndoName)) : L10n.T("Undo");
+        redoItem!.Header = session.History.CanRedo ? L10n.F("Redo {0}", HistoryPanel.DisplayName(session.History.RedoName)) : L10n.T("Redo");
+        mergeItem!.Header = L10n.T(session.MergeTitle);
+        clipItem!.Header = L10n.T(session.ActiveLayer?.Clipped == true ? "Release Clipping Mask" : "Create Clipping Mask");
     }
 
     private void Execute(Shortcut command)
@@ -390,7 +405,7 @@ public sealed partial class MainWindow
         if (command.Enabled?.Invoke() == false || canvas.IsDragging) return;
         problem = note = null;
         try { command.Run(); }
-        catch (Exception error) { _ = Prompts.Alert(this, command.Title, error.Message); }
+        catch (Exception error) { _ = Prompts.Alert(this, L10n.T(command.Title), error.Message); }
         UpdateStatus();
     }
 
@@ -477,12 +492,12 @@ public sealed partial class MainWindow
 
     // ---- Files --------------------------------------------------------------------------------------------------
 
-    private static readonly FilePickerFileType ProjectType = new("Composa project") { Patterns = ["*" + ProjectFile.Extension] };
+    private static FilePickerFileType ProjectType => new(L10n.T("Composa project")) { Patterns = ["*" + ProjectFile.Extension] };
     private static readonly string[] ImageExtensions = [.. ImageFiles.ImportExtensions, .. RawImporter.Extensions];
-    private static readonly FilePickerFileType ImageType = new("Images") { Patterns = ImageExtensions.Select(e => "*" + e).ToArray() };
-    private static readonly FilePickerFileType RawType = new("Camera RAW") { Patterns = RawImporter.Extensions.Select(e => "*" + e).ToArray() };
-    private static readonly FilePickerFileType LookupType = new("Color lookup tables") { Patterns = ["*.cube", "*.3dl"] };
-    private static readonly FilePickerFileType AnyOpenable = new("Projects and images") { Patterns = ImageExtensions.Select(e => "*" + e).Append("*" + ProjectFile.Extension).ToArray() };
+    private static FilePickerFileType ImageType => new(L10n.T("Images")) { Patterns = ImageExtensions.Select(e => "*" + e).ToArray() };
+    private static FilePickerFileType RawType => new(L10n.T("Camera RAW")) { Patterns = RawImporter.Extensions.Select(e => "*" + e).ToArray() };
+    private static FilePickerFileType LookupType => new(L10n.T("Color lookup tables")) { Patterns = ["*.cube", "*.3dl"] };
+    private static FilePickerFileType AnyOpenable => new(L10n.T("Projects and images")) { Patterns = ImageExtensions.Select(e => "*" + e).Append("*" + ProjectFile.Extension).ToArray() };
 
     private async Task NewCanvas()
     {
@@ -492,7 +507,7 @@ public sealed partial class MainWindow
 
     private async Task Open()
     {
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Open", AllowMultiple = true, FileTypeFilter = [AnyOpenable, ProjectType, ImageType, RawType] });
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = L10n.T("Open"), AllowMultiple = true, FileTypeFilter = [AnyOpenable, ProjectType, ImageType, RawType] });
         await OpenPaths(files.Select(f => f.TryGetLocalPath()).OfType<string>());
     }
 
@@ -502,7 +517,7 @@ public sealed partial class MainWindow
         foreach (var path in paths)
         {
             try { await OpenPath(path); }
-            catch (Exception error) { _ = Prompts.Alert(this, "Couldn't open " + Path.GetFileName(path), error.Message); }
+            catch (Exception error) { _ = Prompts.Alert(this, L10n.F("Couldn't open {0}", Path.GetFileName(path)), error.Message); }
         }
     }
 
@@ -550,7 +565,7 @@ public sealed partial class MainWindow
 
     private async Task PlaceImages()
     {
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Place Images as Layers", AllowMultiple = true, FileTypeFilter = [ImageType] });
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = L10n.T("Place Images as Layers"), AllowMultiple = true, FileTypeFilter = [ImageType] });
         await PlacePaths(files.Select(f => f.TryGetLocalPath()).OfType<string>(), null);
     }
 
@@ -598,7 +613,7 @@ public sealed partial class MainWindow
                 }
                 else session.AddImageLayer(name, ImageFiles.Load(path), at);
             }
-            catch (Exception error) { _ = Prompts.Alert(this, "Import couldn't finish", error.Message); }
+            catch (Exception error) { _ = Prompts.Alert(this, L10n.T("Import couldn't finish"), error.Message); }
         }
         SelectTool(Tool.Move);
     }
@@ -655,14 +670,14 @@ public sealed partial class MainWindow
         {
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Save Project", SuggestedFileName = target.Title + ProjectFile.Extension, DefaultExtension = ProjectFile.Extension.TrimStart('.'), FileTypeChoices = [ProjectType]
+                Title = L10n.T("Save Project"), SuggestedFileName = target.Title + ProjectFile.Extension, DefaultExtension = ProjectFile.Extension.TrimStart('.'), FileTypeChoices = [ProjectType]
             });
             path = file?.TryGetLocalPath();
             if (path == null) return false;
             if (!path.EndsWith(ProjectFile.Extension, StringComparison.OrdinalIgnoreCase)) path += ProjectFile.Extension;
         }
         if (await SaveTo(target, path) is not { } error) return true;
-        await Prompts.Alert(this, "Couldn't save", error.Message);
+        await Prompts.Alert(this, L10n.T("Couldn't save"), error.Message);
         return false;
     }
 
@@ -719,8 +734,8 @@ public sealed partial class MainWindow
         var extension = format switch { ExportFormat.Jpeg => "jpg", ExportFormat.Webp => "webp", _ => "png" };
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Export " + extension.ToUpperInvariant(), SuggestedFileName = session.Title + "." + extension, DefaultExtension = extension,
-            FileTypeChoices = [new FilePickerFileType(extension.ToUpperInvariant() + " image") { Patterns = ["*." + extension] }]
+            Title = L10n.F("Export {0}", extension.ToUpperInvariant()), SuggestedFileName = session.Title + "." + extension, DefaultExtension = extension,
+            FileTypeChoices = [new FilePickerFileType(L10n.F("{0} image", extension.ToUpperInvariant())) { Patterns = ["*." + extension] }]
         });
         if (file?.TryGetLocalPath() is not { } path) return;
         try
@@ -731,7 +746,7 @@ public sealed partial class MainWindow
                 ImageFiles.Save(flat, path, format, format == ExportFormat.Png ? 100 : jpegQuality);
             });
         }
-        catch (Exception error) { await Prompts.Alert(this, "Couldn't export", error.Message); }
+        catch (Exception error) { await Prompts.Alert(this, L10n.T("Couldn't export"), error.Message); }
     }
 
     /// <summary>The size of the last look exported, so the dialog opens on it.</summary>
@@ -744,7 +759,7 @@ public sealed partial class MainWindow
         var (baked, leftOut) = LookBake.Survey(session.Document);
         if (baked.Count == 0)
         {
-            ShowProblem(leftOut.Count > 0 ? "None of the adjustment layers can be baked into a look: " + string.Join("; ", leftOut.Select(l => $"{l.Layer.Name} {l.Why}")) + "."
+            ShowProblem(leftOut.Count > 0 ? L10n.F("None of the adjustment layers can be baked into a look: {0}.", string.Join("; ", leftOut.Select(l => $"{l.Layer.Name} {L10n.T(l.Why)}")))
                 : "There is no adjustment layer to bake into a look.");
             return;
         }
@@ -752,8 +767,8 @@ public sealed partial class MainWindow
         lookSize = size;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Export Look", SuggestedFileName = session.Title + ".cube", DefaultExtension = "cube",
-            FileTypeChoices = [new FilePickerFileType("Color lookup table") { Patterns = ["*.cube"] }]
+            Title = L10n.T("Export Look"), SuggestedFileName = session.Title + ".cube", DefaultExtension = "cube",
+            FileTypeChoices = [new FilePickerFileType(L10n.T("Color lookup table")) { Patterns = ["*.cube"] }]
         });
         if (file?.TryGetLocalPath() is not { } path) return;
         try
@@ -762,7 +777,7 @@ public sealed partial class MainWindow
             var names = string.Join(", ", baked.Select(l => l.Name));
             Busy(() => File.WriteAllText(path, LookBake.Bake(baked, size, title).ToCube(title, $"Exported from Composa: {names}")));
         }
-        catch (Exception error) { await Prompts.Alert(this, "Couldn't export", error.Message); }
+        catch (Exception error) { await Prompts.Alert(this, L10n.T("Couldn't export"), error.Message); }
     }
 
     // ---- Clipboard ----------------------------------------------------------------------------------------------
@@ -795,8 +810,8 @@ public sealed partial class MainWindow
     /// <summary>Says what went to the clipboard, because a copy is otherwise silent and the first thing anyone doubts.</summary>
     private void ShowCopied()
     {
-        if (EditorSession.CopiedLayers is { Layers.Count: var count }) ShowNote(count == 1 ? "Copied 1 layer" : $"Copied {count} layers");
-        else if (EditorSession.Clipboard is { } image) ShowNote($"Copied {image.Pixels.Width} × {image.Pixels.Height} px");
+        if (EditorSession.CopiedLayers is { Layers.Count: var count }) ShowNote(count == 1 ? L10n.T("Copied 1 layer") : L10n.F("Copied {0} layers", count));
+        else if (EditorSession.Clipboard is { } image) ShowNote(L10n.F("Copied {0} × {1} px", image.Pixels.Width, image.Pixels.Height));
     }
 
     /// <summary>Shares the copied pixels with other apps.</summary>
@@ -887,7 +902,7 @@ public sealed partial class MainWindow
 
     private async Task ModifySelection(string title, string label, Func<int> initial, int max, Action<int> apply)
     {
-        if (await Prompts.Number(this, title, label, initial(), 1, max) is { } value) apply((int)Math.Round(value));
+        if (await Prompts.Number(this, L10n.T(title), L10n.T(label), initial(), 1, max) is { } value) apply((int)Math.Round(value));
         refreshOptions?.Invoke();
     }
 
@@ -911,7 +926,7 @@ public sealed partial class MainWindow
                 if (!target.SelectSubject()) ShowProblem("No subject found: the picture has no plain backdrop to tell it apart from.");
                 return;
             }
-            var found = await ProgressWindow.Run(this, "Finding the subject…", ct => target.SelectSubjectAsync(Composa.Selections.SelectionMode.Replace, ct));
+            var found = await ProgressWindow.Run(this, L10n.T("Finding the subject…"), ct => target.SelectSubjectAsync(Composa.Selections.SelectionMode.Replace, ct));
             if (found == false) ShowProblem("No subject found in the picture.");
         }
         catch (Exception e) { ReportFailure(e); }
@@ -925,7 +940,7 @@ public sealed partial class MainWindow
         try
         {
             if (SubjectFinder.Resolve(target.Detect) == SubjectDetect.Backdrop) { NoteFallback(target.Detect); target.SelectObject(x, y, mode); return; }
-            await ProgressWindow.Run(this, "Finding the subject…", async ct => { await target.SelectObjectAsync(x, y, mode, ct); return true; });
+            await ProgressWindow.Run(this, L10n.T("Finding the subject…"), async ct => { await target.SelectObjectAsync(x, y, mode, ct); return true; });
         }
         catch (Exception e) { ReportFailure(e); }
     }
@@ -938,7 +953,7 @@ public sealed partial class MainWindow
         try
         {
             NoteFallback(target.Detect);
-            await ProgressWindow.Run(this, "Finding the object…", async ct => { await target.SelectObjectInBoxAsync(box, mode, ct); return true; });
+            await ProgressWindow.Run(this, L10n.T("Finding the object…"), async ct => { await target.SelectObjectInBoxAsync(box, mode, ct); return true; });
         }
         catch (Exception e) { ReportFailure(e); }
     }
@@ -946,7 +961,11 @@ public sealed partial class MainWindow
     /// <summary>Says once why a model choice was not honoured, when the runtime did not load or the file is not installed.</summary>
     private void NoteFallback(SubjectDetect detect)
     {
-        if (SubjectFinder.FallbackReason(detect) is { } reason) ShowNote(reason);
+        if (SubjectFinder.FallbackReason(detect) is not { } reason) return;
+        var model = SubjectFinder.ModelFor(detect);
+        ShowNote(model != null && ModelRunner.IsAvailable
+            ? L10n.F("The {0} model is not installed ({1}), so the plain backdrop was used instead.", model.Name, model.Path)
+            : L10n.T(reason));
     }
 
     private Histogram? HistogramOfActive()
@@ -1071,8 +1090,8 @@ public sealed partial class MainWindow
     {
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Save Look", SuggestedFileName = title + ".cube", DefaultExtension = "cube",
-            FileTypeChoices = [new FilePickerFileType("Color lookup table") { Patterns = ["*.cube"] }]
+            Title = L10n.T("Save Look"), SuggestedFileName = title + ".cube", DefaultExtension = "cube",
+            FileTypeChoices = [new FilePickerFileType(L10n.T("Color lookup table")) { Patterns = ["*.cube"] }]
         });
         return file?.TryGetLocalPath();
     }
@@ -1080,7 +1099,7 @@ public sealed partial class MainWindow
     /// <summary>Asks for a .cube or .3dl for the Color Lookup dialog; null when none was chosen.</summary>
     private async Task<string?> PickLookupFile()
     {
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Load Color Lookup Table", FileTypeFilter = [LookupType] });
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = L10n.T("Load Color Lookup Table"), FileTypeFilter = [LookupType] });
         return files.Count > 0 ? files[0].TryGetLocalPath() : null;
     }
 
@@ -1177,18 +1196,22 @@ public sealed partial class MainWindow
     private async Task EnhanceResolution()
     {
         if (session is not { } target || target.ActiveLayer is not { } layer || !target.CanEnhanceResolution(layer)) return;
-        if (!UpscaleModels.IsAvailable) { ShowProblem(UpscaleModels.UnavailableReason!); return; }
+        if (!UpscaleModels.IsAvailable) { ShowProblem(EnlargeUnavailableReason()); return; }
         var started = DateTime.UtcNow;
-        var enhanced = await ProgressWindow.Run(this, "Enhancing…", (ct, status) => target.PrepareEnhancedResolutionAsync(layer, new Progress<(int Done, int Total)>(p =>
+        var enhanced = await ProgressWindow.Run(this, L10n.T("Enhancing…"), (ct, status) => target.PrepareEnhancedResolutionAsync(layer, new Progress<(int Done, int Total)>(p =>
         {
             var elapsed = DateTime.UtcNow - started;
-            var left = p.Done == 0 ? "" : $", about {Math.Max(1, (int)Math.Round(elapsed.TotalSeconds / p.Done * (p.Total - p.Done)))} s left";
-            status.Report($"Enhancing… tile {p.Done} of {p.Total}{left}");
+            var left = p.Done == 0 ? "" : L10n.F(", about {0} s left", Math.Max(1, (int)Math.Round(elapsed.TotalSeconds / p.Done * (p.Total - p.Done))));
+            status.Report(L10n.F("Enhancing… tile {0} of {1}{2}", p.Done, p.Total, left));
         }), ct));
         if (enhanced == null) return; // Cancelled.
         try { if (!target.EnhanceResolution(layer, enhanced)) ShowProblem("The layer changed while the model ran, so nothing was changed."); }
         finally { enhanced.DisposeUnused(target.Document); }
     }
+
+    private static string EnlargeUnavailableReason() => ModelRunner.IsAvailable
+        ? L10n.F("The enlarging model is not installed ({0}).", UpscaleModels.General.Path)
+        : L10n.T(UpscaleModels.UnavailableReason ?? "");
 
     /// <summary>
     /// Image Size with its Resample choice. Enhance runs the model over every layer first, behind the progress
@@ -1197,16 +1220,16 @@ public sealed partial class MainWindow
     /// </summary>
     public async Task<bool> ResizeImage(EditorSession target, int width, int height, double resolution, ResampleMode mode)
     {
-        if (mode == ResampleMode.Enhance && !UpscaleModels.IsAvailable) { ShowNote(UpscaleModels.UnavailableReason + " The picture was resampled as Automatic does."); mode = ResampleMode.Automatic; }
+        if (mode == ResampleMode.Enhance && !UpscaleModels.IsAvailable) { ShowNote(EnlargeUnavailableReason() + L10n.T(" The picture was resampled as Automatic does.")); mode = ResampleMode.Automatic; }
         EnhancedLayers? enhanced = null;
         if (mode == ResampleMode.Enhance)
         {
             var started = DateTime.UtcNow;
-            enhanced = await ProgressWindow.Run(this, "Enhancing…", (ct, status) => target.PrepareEnhancedAsync(width, height, new Progress<(int Done, int Total)>(p =>
+            enhanced = await ProgressWindow.Run(this, L10n.T("Enhancing…"), (ct, status) => target.PrepareEnhancedAsync(width, height, new Progress<(int Done, int Total)>(p =>
             {
                 var elapsed = DateTime.UtcNow - started;
-                var left = p.Done == 0 ? "" : $", about {Math.Max(1, (int)Math.Round(elapsed.TotalSeconds / p.Done * (p.Total - p.Done)))} s left";
-                status.Report($"Enhancing… tile {p.Done} of {p.Total}{left}");
+                var left = p.Done == 0 ? "" : L10n.F(", about {0} s left", Math.Max(1, (int)Math.Round(elapsed.TotalSeconds / p.Done * (p.Total - p.Done))));
+                status.Report(L10n.F("Enhancing… tile {0} of {1}{2}", p.Done, p.Total, left));
             }), ct));
             if (enhanced == null) return false; // Cancelled.
         }

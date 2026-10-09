@@ -5,6 +5,8 @@ namespace Composa.App;
 /// <summary>Preferences remembered between launches, stored in the platform's config directory (<see cref="AppPaths.Config"/>).</summary>
 public sealed class Settings
 {
+    /// <summary>The UI language, applied on the next launch. Older settings keep the English interface.</summary>
+    public string Language { get; set; } = "en";
     public List<string> RecentFiles { get; set; } = [];
     public double WindowWidth { get; set; } = 1280;
     public double WindowHeight { get; set; } = 820;

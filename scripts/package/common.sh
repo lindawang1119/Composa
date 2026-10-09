@@ -55,7 +55,7 @@ app_version() {
 # and 0.2.1 with release 0.alpha.0.7 for rpm, which is that ecosystem's equivalent.
 deb_version() { echo "${1/-/\~}"; }
 # Windows file version resources hold four numbers and nothing else.
-win_file_version() { echo "${1%%-*}.0"; }
+win_file_version() { echo "${1%%[-+]*}.0"; }
 rpm_version() { echo "${1%%-*}"; }
 rpm_release() { case "$1" in *-*) echo "0.${1#*-}" ;; *) echo 1 ;; esac; }
 

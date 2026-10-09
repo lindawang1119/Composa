@@ -48,19 +48,19 @@ public sealed class UpdateNotice : Border
         // Built here rather than through Ui.IconButton, which leaves the icon its default muted
         // foreground: readable on a dark panel, nearly invisible on this one.
         dismiss = new Button { Content = Icons.Create(Icons.Close, 11, Brushes.White), Classes = { "flat" }, Margin = new Thickness(8, 0, 0, 0) };
-        ToolTip.SetTip(dismiss, "Dismiss");
+        ToolTip.SetTip(dismiss, L10n.T("Dismiss"));
         dismiss.Click += (_, _) => Hide();
         Grid.SetColumn(dismiss, 2);
         row.Children.Add(dismiss);
 
-        var hint = Ui.Label("Or in a terminal:", Brushes.White);
+        var hint = Ui.Label(L10n.T("Or in a terminal:"), Brushes.White);
         hint.Margin = new Thickness(0, 0, 8, 0);
         commandRow.Children.Add(hint);
         Grid.SetColumn(command, 1);
         commandRow.Children.Add(command);
-        copy = Ui.TextButton("Copy", () => _ = CopyCommand());
+        copy = Ui.TextButton(L10n.T("Copy"), () => _ = CopyCommand());
         copy.Margin = new Thickness(8, 0, 0, 0);
-        ToolTip.SetTip(copy, "Copy the command, for a software centre that will not install a downloaded package");
+        ToolTip.SetTip(copy, L10n.T("Copy the command, for a software centre that will not install a downloaded package"));
         Grid.SetColumn(copy, 2);
         commandRow.Children.Add(copy);
 
@@ -96,7 +96,7 @@ public sealed class UpdateNotice : Border
     /// <summary>A newer version exists. <paramref name="canDownload"/> is whether a file for this install can be fetched.</summary>
     public void Show(ReleaseVersion version, bool canDownload)
     {
-        Enter(Phase.Available, $"Composa {version} is available. You are running {AppInfo.Version}.");
+        Enter(Phase.Available, L10n.F("Composa {0} is available. You are running {1}.", version, AppInfo.Version));
         if (canDownload) AddButton("Download", () => Download?.Invoke(), "Download it into your Downloads folder, checked against the release's checksums");
         AddButton("Release notes", () => OpenReleasePage?.Invoke());
         AddButton("Skip this version", () => { Skip?.Invoke(); Hide(); });
@@ -113,8 +113,8 @@ public sealed class UpdateNotice : Border
             progress.IsVisible = true;
         }
         message.Text = received.Total is > 0 and var total
-            ? $"Downloading Composa {version}… {Megabytes(received.Received)} of {Megabytes(total)} MB"
-            : $"Downloading Composa {version}… {Megabytes(received.Received)} MB";
+            ? L10n.F("Downloading Composa {0}… {1} of {2} MB", version, Megabytes(received.Received), Megabytes(total))
+            : L10n.F("Downloading Composa {0}… {1} MB", version, Megabytes(received.Received));
         fraction = received.Total is > 0 and var whole ? Math.Clamp((double)received.Received / whole, 0, 1) : 0;
         LayOutProgress();
     }
@@ -124,21 +124,21 @@ public sealed class UpdateNotice : Border
     public void ShowReady(ReleaseVersion version, string path, string? installHint, string? terminalCommand)
     {
         // The folder by its own name, which is how the file manager shows it; the tooltip has the whole path.
-        Enter(Phase.Ready, $"Composa {version} is ready in {Path.GetFileName(Path.GetDirectoryName(path))}: {Path.GetFileName(path)}");
+        Enter(Phase.Ready, L10n.F("Composa {0} is ready in {1}: {2}", version, Path.GetFileName(Path.GetDirectoryName(path)), Path.GetFileName(path)));
         ToolTip.SetTip(message, path);
         AddButton("Show in Folder", () => ShowInFolder?.Invoke());
         if (installHint != null) AddButton("Install", () => Install?.Invoke(), installHint);
         if (terminalCommand != null)
         {
             command.Text = terminalCommand;
-            copy.Content = "Copy";
+            copy.Content = L10n.T("Copy");
             commandRow.IsVisible = true;
         }
     }
 
     public void ShowFailed(string problem)
     {
-        Enter(Phase.Failed, problem);
+        Enter(Phase.Failed, L10n.T(problem));
         AddButton("Retry", () => Download?.Invoke());
         AddButton("Release notes", () => OpenReleasePage?.Invoke());
     }
@@ -158,7 +158,7 @@ public sealed class UpdateNotice : Border
 
     /// <summary>Presses a button by its label, as a click would.</summary>
     public void Press(string label) =>
-        buttons.Children.OfType<Button>().Single(b => b.Content as string == label)
+        buttons.Children.OfType<Button>().Single(b => b.Content as string == L10n.T(label))
             .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
 
     private void Enter(Phase phase, string text)
@@ -176,8 +176,8 @@ public sealed class UpdateNotice : Border
 
     private void AddButton(string label, Action click, string? tip = null)
     {
-        var button = Ui.TextButton(label, click);
-        if (tip != null) ToolTip.SetTip(button, tip);
+        var button = Ui.TextButton(L10n.T(label), click);
+        if (tip != null) ToolTip.SetTip(button, L10n.T(tip));
         buttons.Children.Add(button);
     }
 
@@ -187,7 +187,7 @@ public sealed class UpdateNotice : Border
     {
         if (TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard || command.Text is not { } text) return;
         await clipboard.SetTextAsync(text);
-        copy.Content = "Copied";
+        copy.Content = L10n.T("Copied");
     }
 
     /// <summary>Megabytes as GitHub counts them on the release page, a million bytes, to one decimal.</summary>

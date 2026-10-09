@@ -44,7 +44,7 @@ public sealed class ToolButton : ToggleButton
         this.group = group ?? [];
         Classes.Add("tool");
         Show(icon);
-        ToolTip.SetTip(this, tip);
+        ToolTip.SetTip(this, L10n.T(tip));
         holdTimer = new DispatcherTimer { Interval = HoldDelay };
         holdTimer.Tick += (_, _) =>
         {
@@ -79,9 +79,9 @@ public sealed class ToolButton : ToggleButton
         if (Current is not { } current) return;
         Show(current.Icon);
         var key = current.Key() is { } gesture ? $" ({Shortcut.Label(gesture)})" : "";
-        var others = group.Where(c => c != current).Select(c => c.Name).ToList();
-        var list = others.Count == 1 ? others[0] : string.Join(", ", others.SkipLast(1)) + " and " + others[^1];
-        ToolTip.SetTip(this, $"{current.Name}{key} · click and hold for {list}");
+        var others = group.Where(c => c != current).Select(c => L10n.T(c.Name)).ToList();
+        var list = others.Count == 1 ? others[0] : string.Join(L10n.T(", "), others.SkipLast(1)) + L10n.T(" and ") + others[^1];
+        ToolTip.SetTip(this, L10n.F("{0}{1} · click and hold for {2}", L10n.T(current.Name), key, list));
     }
 
     /// <summary>
@@ -99,7 +99,7 @@ public sealed class ToolButton : ToggleButton
         {
             var item = new MenuItem
             {
-                Header = choice.Name, Icon = Icons.Create(choice.Icon, 16), InputGesture = choice.Key(), Tag = choice,
+                Header = L10n.T(choice.Name), Icon = Icons.Create(choice.Icon, 16), InputGesture = choice.Key(), Tag = choice,
                 ToggleType = MenuItemToggleType.Radio, IsChecked = choice.IsCurrent()
             };
             item.Click += (_, _) => choice.Choose();
